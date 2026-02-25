@@ -11,24 +11,30 @@ class InventoryFilter(admin.SimpleListFilter):
     parameter_name = 'inventory'
 
     def lookups(self, request, model_admin):
-        return [
-            ('<10', 'Low')
-        ]
+        return [('<10', 'Low')]
 
     def queryset(self, request, queryset: QuerySet):
         if self.value() == '<10':
             return queryset.filter(inventory__lt=10)
 
 
+class ProductImageInline(admin.TabularInline):
+    model = models.ProductImage
+    readonly_fields = ['thumbnail']
+
+    def thumbnail(self, instance):
+        if instance.image.name != '':
+            return format_html('<img src="{}" class="thumbnail"/>', instance.image.url)
+        return ''
+
+
 @admin.register(models.Product)
 class ProductAdmin(admin.ModelAdmin):
     autocomplete_fields = ['collection']
-    prepopulated_fields = {
-        'slug': ['title']
-    }
+    prepopulated_fields = {'slug': ['title']}
     actions = ['clear_inventory']
-    list_display = ['title', 'unit_price',
-                    'inventory_status', 'collection_title']
+    inlines = [ProductImageInline]
+    list_display = ['title', 'unit_price', 'inventory_status', 'collection_title']
     list_editable = ['unit_price']
     list_filter = ['collection', 'last_update', InventoryFilter]
     list_per_page = 10
@@ -50,8 +56,11 @@ class ProductAdmin(admin.ModelAdmin):
         self.message_user(
             request,
             f'{updated_count} products were successfully updated.',
-            messages.ERROR
+            messages.ERROR,
         )
+
+    class Media:
+        css = {'all': ['store/styles.css']}
 
 
 @admin.register(models.Collection)
@@ -65,20 +74,19 @@ class CollectionAdmin(admin.ModelAdmin):
         url = (
             reverse('admin:store_product_changelist')
             + '?'
-            + urlencode({
-                'collection__id': str(collection.id)
-            }))
-        return format_html('<a href="{}">{} Products</a>', url, collection.products_count)
+            + urlencode({'collection__id': str(collection.id)})
+        )
+        return format_html(
+            '<a href="{}">{} Products</a>', url, collection.products_count
+        )
 
     def get_queryset(self, request):
-        return super().get_queryset(request).annotate(
-            products_count=Count('products')
-        )
+        return super().get_queryset(request).annotate(products_count=Count('products'))
 
 
 @admin.register(models.Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ['first_name', 'last_name',  'membership', 'orders']
+    list_display = ['first_name', 'last_name', 'membership', 'orders']
     list_editable = ['membership']
     list_per_page = 10
     list_select_related = ['user']
@@ -90,15 +98,12 @@ class CustomerAdmin(admin.ModelAdmin):
         url = (
             reverse('admin:store_order_changelist')
             + '?'
-            + urlencode({
-                'customer__id': str(customer.id)
-            }))
+            + urlencode({'customer__id': str(customer.id)})
+        )
         return format_html('<a href="{}">{} Orders</a>', url, customer.orders_count)
 
     def get_queryset(self, request):
-        return super().get_queryset(request).annotate(
-            orders_count=Count('order')
-        )
+        return super().get_queryset(request).annotate(orders_count=Count('order'))
 
 
 class OrderItemInline(admin.TabularInline):
