@@ -105,7 +105,7 @@ DATABASES = {
         'NAME': 'storefront3',
         'HOST': 'localhost',
         'USER': 'root',
-        'PASSWORD': '9629',
+        'PASSWORD': 'P@ssword',
     }
 }
 
@@ -174,3 +174,5 @@ DJOSER = {
 }
 
 SIMPLE_JWT = {'AUTH_HEADER_TYPES': ('JWT',), 'ACCESS_TOKEN_LIFETIME': timedelta(days=1)}
+
+CELERY_BROKER_URL = 'redis://localhost:6379/1'
