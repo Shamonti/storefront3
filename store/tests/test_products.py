@@ -1,3 +1,5 @@
+from urllib import response
+
 from store.models import Collection, Product
 
 from model_bakery import baker
@@ -42,14 +44,16 @@ class TestCreateProduct:
         response = create_product(
             {
                 'title': 'a',
+                'slug': 'a',
                 'unit_price': 10,
                 'collection': collection.id,
                 'inventory': 5,
             }
         )
 
-        assert response.status_code == status.HTTP_201_CREATED
+        assert response.status_code == status.HTTP_201_CREATED, response.data
         assert response.data['id'] > 0
+        assert response.data['title'] == 'a'
         print(response.data)
 
 
@@ -57,3 +61,55 @@ class TestCreateProduct:
 class TestRetrieveProduct:
     def test_if_collection_exists_returns_200(self, api_client):
         product = baker.make(Product)
+
+        response = api_client.get(f'/store/products/{product.id}/')
+
+        assert response.status_code == status.HTTP_200_OK
+
+        assert response.data['id'] == product.id
+        assert response.data['title'] == product.title
+
+
+@pytest.mark.django_db
+class TestListProducts:
+    def test_if_product_lists_return_200(self, api_client):
+        baker.make(Product, _quantity=5)
+
+        response = api_client.get('/store/products/')
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data['results']) == 5
+
+
+@pytest.mark.django_db
+class TestUpdateProduct:
+
+    def test_if_user_is_anonymous_returns_401(self, api_client):
+        product = baker.make(Product)
+
+        response = api_client.patch(
+            f'/store/products/{product.id}/', {'title': 'updated'}
+        )
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_if_user_is_not_admin_returns_403(self, authenticate, api_client):
+        authenticate()
+        product = baker.make(Product)
+
+        response = api_client.patch(
+            f'/store/products/{product.id}/', {'title': 'updated'}
+        )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_if_data_is_valid_returns_200(self, authenticate, api_client):
+        authenticate(is_staff=True)
+        product = baker.make(Product)
+
+        response = api_client.patch(
+            f'/store/products/{product.id}/', {'title': 'updated'}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['title'] == 'updated'
