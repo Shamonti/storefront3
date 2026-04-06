@@ -27,6 +27,6 @@ class WebsiteUser(HttpUser):
         )
 
     def on_start(self):
-        response = self.client.post('/store/carts')
+        response = self.client.post('/store/carts/')
         result = response.json()
         self.cart_id = result['id']
